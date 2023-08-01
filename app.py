@@ -1,4 +1,3 @@
-import os
 from diffusers import StableDiffusionPipeline
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from inky.inky_uc8159 import Inky
@@ -6,7 +5,6 @@ import datetime
 import random
 import json
 import os
-
 
 filename = os.path.dirname(os.path.realpath(__file__)) + "/prompt.json"
 prompt_json = open(filename , "r")
