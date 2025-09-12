@@ -5,10 +5,10 @@
 ### ワンクリックインストール
 ```bash
 # 自動インストール実行
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/ai-photoframe/main/install_fastsdcpu_rpi.sh | bash
+curl -fsSL https://raw.githubusercontent.com/donkeykey/AIPhotoFrame/main/ai-photoframe/install_fastsdcpu_rpi.sh | bash
 
 # またはローカルファイルから実行
-wget https://raw.githubusercontent.com/YOUR_USERNAME/ai-photoframe/main/install_fastsdcpu_rpi.sh
+wget https://raw.githubusercontent.com/donkeykey/AIPhotoFrame/main/ai-photoframe/install_fastsdcpu_rpi.sh
 chmod +x install_fastsdcpu_rpi.sh
 ./install_fastsdcpu_rpi.sh
 ```

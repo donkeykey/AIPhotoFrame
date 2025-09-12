@@ -6,7 +6,7 @@ Raspberry Pi 4B/5でFastSD CPUを使用したStable Diffusion画像生成AIの�
 ## 🔧 ワンクリックインストール
 ```bash
 # 自動インストールスクリプト実行（推奨）
-curl -fsSL https://raw.githubusercontent.com/user/ai-photoframe/main/install_fastsdcpu_rpi.sh | bash
+curl -fsSL https://raw.githubusercontent.com/donkeykey/AIPhotoFrame/main/ai-photoframe/install_fastsdcpu_rpi.sh | bash
 
 # または手動インストールの場合は以下の手順に従ってください
 ```
