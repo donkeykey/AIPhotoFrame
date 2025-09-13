@@ -48,14 +48,15 @@ class ImageGenerator:
             print(f"❌ モデル読み込みエラー: {e}")
             return False
     
-    def generate_image(self, prompt, output_path="generated_image.png"):
+    def generate_image(self, prompt, output_path="generated_image.png", callback=None):
         """
         画像を生成して保存
-        
+
         Args:
             prompt (str): 生成する画像の説明
             output_path (str): 保存先パス
-            
+            callback (callable): 進行状況コールバック関数
+
         Returns:
             bool: 生成成功時True
         """
@@ -66,16 +67,23 @@ class ImageGenerator:
         try:
             print(f"画像生成中: '{prompt}'")
             print("Raspberry Pi CPUでは10-15分程度かかります...")
-            
+
+            # コールバック関数を定義
+            def step_callback(step, timestep, latents):
+                if callback:
+                    callback(step, 20)  # 現在のstep、総step数
+                return {}
+
             # 640x400サイズで画像生成
             start_time = time()
             image = self.pipe(
                 prompt,
-                #num_inference_steps=1,      # バランスの取れたステップ数
                 num_inference_steps=20,      # バランスの取れたステップ数
                 guidance_scale=7.5,
                 height=400,                  # e-paperサイズに合わせて調整
                 width=640,
+                callback=step_callback,
+                callback_steps=1,            # 毎ステップでコールバック実行
             ).images[0]
             end_time = time()
             

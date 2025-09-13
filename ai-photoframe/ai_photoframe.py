@@ -101,9 +101,19 @@ class AIPhotoFrame:
         timestamp_str = now.strftime("%Y%m%d_%H%M%S")
         output_file = os.path.join(self.output_dir, f"ai_photo_{timestamp_str}.png")
         
+        # 進行状況コールバック関数を定義
+        def progress_callback(step, total_steps):
+            progress = (step + 1) / total_steps * 100
+            elapsed = time.time() - start_time
+            if progress > 0:
+                estimated_total = elapsed / progress * 100
+                remaining = max(0, estimated_total - elapsed)
+                print(f"📊 Step {step + 1:2d}/{total_steps} ({progress:5.1f}%) | 経過: {elapsed:.0f}秒 | 残り: 約{remaining:.0f}秒")
+
         # 画像生成
         print("🎨 画像生成を開始...")
-        success = self.generator.generate_image(prompt, output_file)
+        start_time = time.time()
+        success = self.generator.generate_image(prompt, output_file, callback=progress_callback)
         
         if not success:
             print("❌ 画像生成に失敗しました")
@@ -233,8 +243,12 @@ class AIPhotoFrame:
 
     def _signal_handler(self, signum, frame):
         """シグナルハンドラー（Ctrl+C等での終了処理）"""
-        print(f"\n🛑 シグナル {signum} を受信しました。終了処理中...")
+        print(f"\n🛑 シグナル {signum} を受信しました。強制終了します...")
         self.running = False
+        # 強制終了のため即座にexit
+        import sys
+        print("🚨 画像生成処理を中断中...")
+        sys.exit(0)
 
     def run_continuous(self):
         """永続実行モード - 表示完了後すぐに次の画像を生成し続ける"""
@@ -291,6 +305,12 @@ class AIPhotoFrame:
 
         except KeyboardInterrupt:
             print("\n🛑 キーボード割り込みを受信しました")
+            print("🚨 処理を強制終了します...")
+            import sys
+            sys.exit(0)
+        except SystemExit:
+            print("🛑 システム終了要求を受信しました")
+            raise
         finally:
             self.running = False
             print(f"\n🏁 AI Photo Frame連続実行モードを終了しました")

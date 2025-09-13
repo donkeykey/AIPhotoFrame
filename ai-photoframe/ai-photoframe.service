@@ -33,7 +33,7 @@ ProtectHome=read-only
 PrivateTmp=true
 
 # リソース制限
-MemoryMax=2G
+MemoryMax=6G
 CPUQuota=80%
 
 [Install]
