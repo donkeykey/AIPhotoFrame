@@ -1,0 +1,31 @@
+{
+  "continuous_mode": {
+    "enabled": true,
+    "prompts": [
+      "beautiful sunset over mountains, digital art",
+      "serene forest with morning mist, photorealistic",
+      "abstract geometric patterns in blue and gold",
+      "peaceful lake with reflections, watercolor style",
+      "vibrant flower garden in spring, oil painting",
+      "minimalist zen garden with stones, black and white",
+      "cosmic nebula with stars, space photography",
+      "old library with books and warm light, vintage",
+      "japanese temple in autumn, traditional art",
+      "ocean waves on sandy beach, realistic photography",
+      "cherry blossoms in bloom, japanese art style",
+      "northern lights over snowy landscape, photograph",
+      "vintage steam train in countryside, oil painting",
+      "underwater coral reef scene, vibrant colors",
+      "mountain cabin in winter, cozy atmosphere"
+    ]
+  },
+  "display": {
+    "resolution": [640, 400],
+    "border_color": "black"
+  },
+  "image": {
+    "format": "png",
+    "quality": 95,
+    "max_stored": 10
+  }
+}

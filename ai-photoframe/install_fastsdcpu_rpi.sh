@@ -115,6 +115,63 @@ check_prerequisites() {
     log_success "前提条件: すべてクリア"
 }
 
+# SPI有効化
+enable_spi() {
+    log_step "SPI インターフェースの有効化"
+    current_step="SPI有効化"
+    
+    # 現在のSPI設定確認
+    if grep -q "^dtparam=spi=on" /boot/firmware/config.txt; then
+        log_success "SPI は既に有効化されています"
+        return
+    fi
+    
+    log_info "config.txt の SPI 設定を確認中..."
+    
+    # config.txtのバックアップ
+    sudo cp /boot/firmware/config.txt /boot/firmware/config.txt.backup.$(date +%Y%m%d_%H%M%S)
+    log_info "config.txtのバックアップを作成しました"
+    
+    # SPIを有効化
+    if grep -q "^#dtparam=spi=on" /boot/firmware/config.txt; then
+        # コメントアウトされている場合は有効化
+        log_info "SPI設定のコメントアウトを解除中..."
+        sudo sed -i 's/^#dtparam=spi=on/dtparam=spi=on/' /boot/firmware/config.txt
+    else
+        # 設定が存在しない場合は追加
+        log_info "SPI設定を追加中..."
+        echo "dtparam=spi=on" | sudo tee -a /boot/firmware/config.txt > /dev/null
+    fi
+    
+    # E-paper用のSPI追加設定
+    if ! grep -q "^dtoverlay=spi0-0cs" /boot/firmware/config.txt; then
+        log_info "E-paper用SPI設定を追加中..."
+        echo "dtoverlay=spi0-0cs" | sudo tee -a /boot/firmware/config.txt > /dev/null
+        log_info "dtoverlay=spi0-0cs を追加しました"
+    fi
+    
+    # I2Cも同時に有効化（E-paperで使用する場合があるため）
+    if ! grep -q "^dtparam=i2c_arm=on" /boot/firmware/config.txt; then
+        if grep -q "^#dtparam=i2c_arm=on" /boot/firmware/config.txt; then
+            log_info "I2C設定のコメントアウトを解除中..."
+            sudo sed -i 's/^#dtparam=i2c_arm=on/dtparam=i2c_arm=on/' /boot/firmware/config.txt
+        else
+            log_info "I2C設定を追加中..."
+            echo "dtparam=i2c_arm=on" | sudo tee -a /boot/firmware/config.txt > /dev/null
+        fi
+    fi
+    
+    # ユーザーをspiとi2cグループに追加
+    log_info "ユーザー権限を設定中..."
+    sudo usermod -a -G spi,i2c,gpio $USER
+    
+    log_success "SPI/I2C インターフェースの有効化完了"
+    log_warning "変更を有効にするには再起動が必要です"
+    
+    # 再起動が必要であることを記録
+    REBOOT_REQUIRED=true
+}
+
 # システム更新
 update_system() {
     log_step "システムの更新"
@@ -242,6 +299,14 @@ install_fastsdcpu() {
     pip install Pillow
     pip install tqdm
     
+    log_info "AI Photo Frame用の追加パッケージをインストール中..."
+    # E-paper display support
+    pip install inky
+    # その他の画像処理ライブラリ
+    pip install pillow
+    pip install RPi.GPIO
+    pip install spidev
+    
     log_success "FastSD CPU インストール完了"
 }
 
@@ -338,6 +403,67 @@ EOF
     
     chmod +x test_fastsd.py
     log_success "テストスクリプト作成完了"
+}
+
+# systemdサービスの設定
+setup_systemd_service() {
+    log_step "systemd自動起動サービスの設定"
+    current_step="systemdサービス設定"
+
+    # AI Photo Frameディレクトリの確認
+    AI_PHOTOFRAME_DIR="$HOME/AIPhotoFrame/ai-photoframe"
+    if [ ! -d "$AI_PHOTOFRAME_DIR" ]; then
+        log_warning "AI Photo Frameディレクトリが見つかりません: $AI_PHOTOFRAME_DIR"
+        log_warning "systemdサービスの設定をスキップします"
+        return
+    fi
+
+    # サービスファイルの確認
+    if [ ! -f "$AI_PHOTOFRAME_DIR/ai-photoframe.service" ]; then
+        log_warning "systemdサービスファイルが見つかりません"
+        log_warning "systemdサービスの設定をスキップします"
+        return
+    fi
+
+    log_info "systemdサービスファイルをコピー中..."
+    sudo cp "$AI_PHOTOFRAME_DIR/ai-photoframe.service" /etc/systemd/system/
+
+    log_info "systemd設定をリロード中..."
+    sudo systemctl daemon-reload
+
+    # サービスの有効化確認
+    read -p "AI Photo Frameを自動起動しますか？ (Y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        log_info "AI Photo Frameサービスを有効化中..."
+        sudo systemctl enable ai-photoframe.service
+
+        read -p "今すぐサービスを開始しますか？ (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            log_info "AI Photo Frameサービスを開始中..."
+            sudo systemctl start ai-photoframe.service
+
+            # サービス状態確認
+            sleep 3
+            if systemctl is-active --quiet ai-photoframe.service; then
+                log_success "AI Photo Frameサービスが正常に開始されました"
+                log_info "サービス状態を確認: sudo systemctl status ai-photoframe"
+                log_info "ログを確認: sudo journalctl -u ai-photoframe -f"
+            else
+                log_warning "AI Photo Frameサービスの開始に失敗した可能性があります"
+                log_info "状態確認: sudo systemctl status ai-photoframe"
+            fi
+        else
+            log_info "サービスは有効化されていますが、開始されていません"
+            log_info "手動で開始: sudo systemctl start ai-photoframe"
+        fi
+    else
+        log_info "自動起動は設定されませんでした"
+        log_info "手動で有効化: sudo systemctl enable ai-photoframe"
+    fi
+
+    log_success "systemdサービス設定完了"
 }
 
 # 起動スクリプトの作成
@@ -442,10 +568,23 @@ show_completion_message() {
     echo "     cd $PROJECT_DIR"
     echo "     ./test_installation.sh"
     echo ""
+    echo "  4. AI Photo Frame の使用:"
+    echo "     cd ~/AIPhotoFrame/ai-photoframe"
+    echo "     ./run_ai_photoframe.sh generate \"beautiful mountain landscape\""
+    echo "     ./run_ai_photoframe.sh display /path/to/image.jpg"
+    echo "     ./run_ai_photoframe.sh continuous  # 永続実行モード"
+    echo ""
+    echo "  5. systemd自動起動管理:"
+    echo "     sudo systemctl start ai-photoframe      # サービス開始"
+    echo "     sudo systemctl stop ai-photoframe       # サービス停止"
+    echo "     sudo systemctl status ai-photoframe     # 状態確認"
+    echo "     sudo journalctl -u ai-photoframe -f     # ログ確認"
+    echo ""
     echo "⚠️  注意事項:"
     echo "  - 初回実行時はモデルダウンロードに時間がかかります（約10-15分）"
     echo "  - Raspberry Pi CPUでの画像生成は10-15分程度かかります"
     echo "  - メモリ使用量を抑えるため、実行中は他のアプリを終了してください"
+    echo "  - E-paperディスプレイを使用する場合はSPIが有効化されている必要があります"
     echo ""
     echo "🔧 システム情報:"
     echo "  - Raspberry Pi モデル: $(cat /proc/device-tree/model 2>/dev/null || echo 'Unknown')"
@@ -466,15 +605,36 @@ main() {
     echo "================================================"
     echo ""
     
+    # 再起動フラグを初期化
+    REBOOT_REQUIRED=false
+    
     get_system_info
     check_prerequisites
+    enable_spi
     update_system
     setup_swap
     setup_python_env
     install_fastsdcpu
     create_test_script
     create_startup_scripts
+    setup_systemd_service
     show_completion_message
+    
+    # 再起動が必要な場合の処理
+    if [ "$REBOOT_REQUIRED" = true ]; then
+        echo ""
+        log_warning "システムの変更を有効にするために再起動が必要です"
+        echo ""
+        read -p "今すぐ再起動しますか？ (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            log_info "システムを再起動しています..."
+            sudo reboot
+        else
+            log_warning "手動で再起動してください: sudo reboot"
+            log_info "再起動後にAI Photo Frameが使用可能になります"
+        fi
+    fi
     
     log_success "インストールプロセス完了！"
 }

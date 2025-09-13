@@ -1,0 +1,40 @@
+[Unit]
+Description=AI Photo Frame - Continuous Image Generation Service
+Documentation=https://github.com/donkeykey/AIPhotoFrame
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/AIPhotoFrame/ai-photoframe
+Environment=PATH=/home/pi/fastsdcpu-project/fastsd-simple-env/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStartPre=/bin/bash -c 'source /home/pi/fastsdcpu-project/fastsd-simple-env/bin/activate'
+ExecStart=/home/pi/fastsdcpu-project/fastsd-simple-env/bin/python /home/pi/AIPhotoFrame/ai-photoframe/ai_photoframe.py continuous
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ai-photoframe
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=60
+
+# セキュリティ設定
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/pi/AIPhotoFrame/ai-photoframe/generated_images
+ReadWritePaths=/home/pi/.cache
+ReadWritePaths=/tmp
+ProtectHome=read-only
+PrivateTmp=true
+
+# リソース制限
+MemoryMax=2G
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target
